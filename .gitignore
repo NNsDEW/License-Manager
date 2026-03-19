@@ -1,0 +1,24 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Django / DB
+db.sqlite3
+
+# Python build artifacts
+build/
+dist/
+demo_check_key.spec
+build_demo_check_key/
+dist_demo_check_key/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# IDE
+.cursor/
+.idea/
+.vscode/
+

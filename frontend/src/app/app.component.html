@@ -1,0 +1,507 @@
+<!-- Экран входа / регистрации -->
+<div *ngIf="!loggedIn" class="login-page">
+  <div class="login-card">
+    <h1>{{ showRegister ? 'Регистрация' : 'Вход в систему' }}</h1>
+    <p class="login-hint" *ngIf="!showRegister">Логин и пароль выдает администратор или зарегистрируйтесь. Пример: admin / admin123</p>
+    <p class="login-hint" *ngIf="showRegister">Создайте аккаунт, чтобы добавлять свои продукты, типы лицензий и генерировать ключи.</p>
+
+    <form *ngIf="!showRegister" (ngSubmit)="onLogin()" #loginForm="ngForm">
+      <label>Логин <input type="text" name="username" [(ngModel)]="loginUsername" required autocomplete="username" /></label>
+      <label>Пароль <input type="password" name="password" [(ngModel)]="loginPassword" required autocomplete="current-password" /></label>
+      <p *ngIf="loginError" class="error">{{ loginError }}</p>
+      <button type="submit" [disabled]="loginLoading || !loginForm.form.valid">
+        {{ loginLoading ? 'Вход...' : 'Войти' }}
+      </button>
+      <button type="button" class="btn-secondary" (click)="showRegister = true">Регистрация</button>
+    </form>
+
+    <form *ngIf="showRegister" (ngSubmit)="onRegister()" #regForm="ngForm">
+      <label>Логин <input type="text" name="reg_username" [(ngModel)]="registerUsername" required autocomplete="username" /></label>
+      <label>Пароль <input type="password" name="reg_password" [(ngModel)]="registerPassword" required /></label>
+      <label>Email (необязательно) <input type="email" name="reg_email" [(ngModel)]="registerEmail" /></label>
+      <p *ngIf="registerError" class="error">{{ registerError }}</p>
+      <button type="submit" [disabled]="registerLoading || !regForm.form.valid">
+        {{ registerLoading ? 'Регистрация...' : 'Зарегистрироваться' }}
+      </button>
+      <button type="button" class="btn-secondary" (click)="showRegister = false; registerError = ''">Назад к входу</button>
+    </form>
+  </div>
+</div>
+
+<div *ngIf="loggedIn" class="layout">
+  <nav class="nav">
+    <h1 class="nav-title">Лицензии</h1>
+    <ul class="nav-list">
+      <li><a (click)="setSection('home')" [class.active]="section === 'home'" href="javascript:void(0)">Главная</a></li>
+      <li><a (click)="setSection('generate')" [class.active]="section === 'generate'" href="javascript:void(0)">Генерация ключей</a></li>
+      <li><a (click)="setSection('validate')" [class.active]="section === 'validate'" href="javascript:void(0)">Проверка лицензии</a></li>
+      <li><a (click)="setSection('clients')" [class.active]="section === 'clients'" href="javascript:void(0)">Клиенты</a></li>
+      <li><a (click)="setSection('products')" [class.active]="section === 'products'" href="javascript:void(0)">Продукты</a></li>
+      <li><a (click)="setSection('license-types')" [class.active]="section === 'license-types'" href="javascript:void(0)">Типы лицензий</a></li>
+      <li><a (click)="setSection('licenses')" [class.active]="section === 'licenses'" href="javascript:void(0)">Лицензии</a></li>
+      <li><a (click)="setSection('tickets')" [class.active]="section === 'tickets'" href="javascript:void(0)">Поддержка</a></li>
+      <li *ngIf="isStaff"><a (click)="setSection('users')" [class.active]="section === 'users'" href="javascript:void(0)">Пользователи</a></li>
+      <li><a (click)="setSection('help')" [class.active]="section === 'help'" href="javascript:void(0)">Помощь</a></li>
+    </ul>
+    <div class="nav-user">
+      <span class="nav-username">{{ userInfo?.username }}</span>
+      <span *ngIf="userInfo?.is_staff" class="nav-badge">Админ</span>
+      <button type="button" class="btn-logout" (click)="onLogout()">Выйти</button>
+    </div>
+  </nav>
+
+  <main class="main">
+    <p *ngIf="errorMessage" class="error">{{ errorMessage }}</p>
+
+    <!-- Главная -->
+    <ng-container *ngIf="section === 'home'">
+      <h2>Главная</h2>
+      <p class="lead">Добро пожаловать. Генерация ключей — в разделе <strong>«Генерация ключей»</strong>. Проверка ключа — в <strong>«Проверка лицензии»</strong>. Ваши клиенты, продукты и лицензии — в соответствующих разделах меню.</p>
+      <p>Каждый пользователь видит и создаёт только свои данные; ключи генерируются для своих клиентов и продуктов. Админ может просматривать данные по каждому пользователю в разделе <strong>«Пользователи»</strong>.</p>
+      <p class="lead">
+        Система сделана с заботой и надежной проверкой. Автор: <strong>Наминов Наиль Сергеевич</strong>
+        (<a href="https://github.com/NNsDEW" target="_blank" rel="noopener noreferrer">NNsDEW</a>).
+      </p>
+    </ng-container>
+
+    <!-- Тикеты поддержки -->
+    <ng-container *ngIf="section === 'tickets'">
+      <h2>Поддержка</h2>
+      <p class="lead">
+        Здесь вы можете оставить обращение по работе ключей, клиентов или продуктов.
+        Администратор увидит тикет в этом же разделе и сможет ответить.
+      </p>
+      <div class="card inline-form">
+        <h3>Создать тикет</h3>
+        <form (ngSubmit)="onCreateTicket()">
+          <label>Клиент (обязательный)
+            <select [(ngModel)]="newTicket.client" name="ticket_client">
+              <option [ngValue]="null" disabled>— выберите —</option>
+              <option *ngFor="let c of clients" [ngValue]="c.id">{{ c.name }} ({{ c.contact_email }})</option>
+            </select>
+          </label>
+          <label>Лицензия (необязательно)
+            <select [(ngModel)]="newTicket.license" name="ticket_license">
+              <option [ngValue]="null">— не указывать —</option>
+              <option *ngFor="let lic of licenses" [ngValue]="lic.id">
+                {{ lic.id }} — {{ lic.product }} ({{ lic.license_type }})
+              </option>
+            </select>
+          </label>
+          <label>Приоритет
+            <select [(ngModel)]="newTicket.priority" name="ticket_priority">
+              <option [ngValue]="'LOW'">Низкий</option>
+              <option [ngValue]="'MEDIUM'">Средний</option>
+              <option [ngValue]="'HIGH'">Высокий</option>
+            </select>
+          </label>
+          <label>Тема
+            <input type="text" [(ngModel)]="newTicket.subject" name="ticket_subject" required />
+          </label>
+          <label>Описание
+            <textarea [(ngModel)]="newTicket.description" name="ticket_description" rows="3" required></textarea>
+          </label>
+          <button type="submit" [disabled]="creating['ticket']">
+            {{ creating['ticket'] ? 'Отправка...' : 'Отправить тикет' }}
+          </button>
+        </form>
+      </div>
+      <p *ngIf="loadingList['tickets']">Загрузка тикетов...</p>
+      <div *ngIf="!loadingList['tickets'] && supportTickets.length === 0" class="empty">
+        Тикетов пока нет.
+      </div>
+      <div *ngIf="!loadingList['tickets'] && supportTickets.length > 0" class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Клиент</th>
+              <th>Лицензия</th>
+              <th>Тема</th>
+              <th>Приоритет</th>
+              <th>Статус</th>
+              <th>Создал</th>
+              <th>Назначен</th>
+              <th>Создан</th>
+              <th *ngIf="isStaff">Действия (админ)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let t of supportTickets">
+              <td>{{ t.id }}</td>
+              <td>{{ t.client }}</td>
+              <td>{{ t.license || '—' }}</td>
+              <td>{{ t.subject }}</td>
+              <td>{{ t.priority }}</td>
+              <td>{{ t.status }}</td>
+              <td>{{ t.created_by }}</td>
+              <td>{{ t.assigned_to || '—' }}</td>
+              <td>{{ t.created_at | date:'short' }}</td>
+              <td *ngIf="isStaff">
+                <button type="button" class="btn-small" (click)="onAdminAssignTicketToMe(t)">Назначить на меня</button>
+                <button type="button" class="btn-small" (click)="onAdminSetTicketStatus(t, 'IN_PROGRESS')">В работу</button>
+                <button type="button" class="btn-small" (click)="onAdminSetTicketStatus(t, 'RESOLVED')">Решено</button>
+                <button type="button" class="btn-small" (click)="onAdminSetTicketStatus(t, 'CLOSED')">Закрыть</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </ng-container>
+
+    <!-- Генерация ключей -->
+    <ng-container *ngIf="section === 'generate'">
+      <h2>Генерация ключей</h2>
+      <p class="lead">Каждый пользователь генерирует ключи для своих клиентов и своих продуктов. Сначала создайте клиента, продукт и тип лицензии в соответствующих разделах.</p>
+      <div class="admin-filter" *ngIf="isStaff">
+        <label>Показать данные пользователя:
+          <select [ngModel]="selectedOwnerId" (ngModelChange)="setSelectedOwnerAndReload($event)" name="filter_owner">
+            <option [ngValue]="null">— выберите пользователя —</option>
+            <option *ngFor="let u of users" [ngValue]="u.id">{{ u.username }}{{ u.is_staff ? ' (админ)' : '' }}</option>
+          </select>
+        </label>
+      </div>
+      <section class="card">
+        <form (ngSubmit)="onGenerate()" #genForm="ngForm">
+          <label>Клиент
+            <select name="client_id" [(ngModel)]="generatePayload.client_id" required>
+              <option [ngValue]="null" disabled>— выберите —</option>
+              <option *ngFor="let c of clients" [ngValue]="c.id">{{ c.name }} ({{ c.contact_email }})</option>
+            </select>
+          </label>
+          <label>Продукт
+            <select name="product_id" [(ngModel)]="generatePayload.product_id" required>
+              <option [ngValue]="null" disabled>— выберите —</option>
+              <option *ngFor="let p of products" [ngValue]="p.id">{{ p.name }} ({{ p.code }})</option>
+            </select>
+          </label>
+          <label>Тип лицензии
+            <select name="license_type_id" [(ngModel)]="generatePayload.license_type_id" required>
+              <option [ngValue]="null" disabled>— выберите —</option>
+              <option *ngFor="let lt of licenseTypes" [ngValue]="lt.id">{{ lt.name }} (макс. {{ lt.max_devices }} уст.)</option>
+            </select>
+          </label>
+          <label>Макс. активаций <input type="number" name="max_activations" [(ngModel)]="generatePayload.max_activations" /></label>
+          <button type="submit" [disabled]="loadingGenerate || !genForm.form.valid">{{ loadingGenerate ? 'Генерация...' : 'Сгенерировать' }}</button>
+        </form>
+        <div *ngIf="generatedLicense" class="result">
+          <h4>Результат</h4>
+          <div class="key-row">
+            <code class="key">{{ generatedLicense.key }}</code>
+            <button type="button" class="btn-copy" (click)="copyKey(generatedLicense.key, 'gen')" [class.copied]="copySuccess === 'gen'">
+              {{ copySuccess === 'gen' ? 'Скопировано' : 'Копировать' }}
+            </button>
+          </div>
+          <pre>{{ generatedLicense | json }}</pre>
+        </div>
+      </section>
+    </ng-container>
+
+    <!-- Проверка лицензии -->
+    <ng-container *ngIf="section === 'validate'">
+      <h2>Проверка лицензии</h2>
+      <p class="lead">Введите ключ — остальные данные подтянутся автоматически.</p>
+      <section class="card">
+        <form (ngSubmit)="onValidate()" #valForm="ngForm">
+          <label>Ключ <input type="text" name="key" [(ngModel)]="validatePayload.key" required /></label>
+          <label>ID устройства <input type="text" name="device_id" [(ngModel)]="validatePayload.device_id" /></label>
+          <label>Имя устройства <input type="text" name="device_name" [(ngModel)]="validatePayload.device_name" /></label>
+          <button type="submit" [disabled]="loadingValidate || !valForm.form.valid">{{ loadingValidate ? 'Проверка...' : 'Проверить' }}</button>
+        </form>
+        <div *ngIf="validationResult" class="result">
+          <h4>Результат</h4>
+          <div *ngIf="validationResult.valid === true" class="kv">
+            <div class="kv-row"><span class="kv-k">Статус</span><span class="kv-v ok">Действителен</span></div>
+            <div class="kv-row"><span class="kv-k">Продукт</span><span class="kv-v"><code>{{ validationResult.product }}</code></span></div>
+            <div class="kv-row"><span class="kv-k">Тип лицензии</span><span class="kv-v">{{ validationResult.license_type }}</span></div>
+            <div class="kv-row"><span class="kv-k">Начало</span><span class="kv-v">{{ validationResult.start_date }}</span></div>
+            <div class="kv-row"><span class="kv-k">Окончание</span><span class="kv-v">{{ validationResult.end_date }}</span></div>
+            <div class="kv-row"><span class="kv-k">Активации</span><span class="kv-v">{{ validationResult.current_activations }} / {{ validationResult.max_activations }}</span></div>
+          </div>
+          <div *ngIf="validationResult.valid === false" class="kv">
+            <div class="kv-row"><span class="kv-k">Статус</span><span class="kv-v bad">Недействителен</span></div>
+            <div class="kv-row"><span class="kv-k">Причина</span><span class="kv-v"><code>{{ validationResult.reason }}</code></span></div>
+          </div>
+          <details style="margin-top: 0.75rem;">
+            <summary>Показать JSON</summary>
+            <pre>{{ validationResult | json }}</pre>
+          </details>
+        </div>
+      </section>
+    </ng-container>
+
+    <!-- Клиенты -->
+    <ng-container *ngIf="section === 'clients'">
+      <h2>Клиенты</h2>
+      <p class="lead">Клиенты — те, кому вы выдаёте лицензии (покупатели вашего ПО). Добавьте клиента, чтобы потом выдать ему ключ.</p>
+      <div class="admin-filter" *ngIf="isStaff">
+        <label>Показать данные пользователя:
+          <select [ngModel]="selectedOwnerId" (ngModelChange)="setSelectedOwnerAndReload($event)" name="filter_owner_clients">
+            <option [ngValue]="null">— выберите пользователя —</option>
+            <option *ngFor="let u of users" [ngValue]="u.id">{{ u.username }}{{ u.is_staff ? ' (админ)' : '' }}</option>
+          </select>
+        </label>
+      </div>
+      <div class="card inline-form">
+        <h3>{{ editingClientId ? 'Редактировать клиента' : 'Добавить клиента' }}</h3>
+        <form (ngSubmit)="onSaveClient()">
+          <label>Имя <input type="text" [(ngModel)]="newClient.name" name="new_client_name" required /></label>
+          <label>Тип <select [(ngModel)]="newClient.client_type" name="new_client_type"><option value="COMPANY">Компания</option><option value="INDIVIDUAL">Физлицо</option></select></label>
+          <label>Email <input type="email" [(ngModel)]="newClient.contact_email" name="new_client_email" required /></label>
+          <label>Телефон <input type="text" [(ngModel)]="newClient.contact_phone" name="new_client_phone" /></label>
+          <label>Страна <input type="text" [(ngModel)]="newClient.country" name="new_client_country" /></label>
+          <button type="submit" [disabled]="creating['client']">
+            {{ creating['client'] ? (editingClientId ? 'Сохранение...' : 'Создание...') : (editingClientId ? 'Сохранить' : 'Создать') }}
+          </button>
+        </form>
+      </div>
+      <p *ngIf="loadingList['clients']">Загрузка...</p>
+      <div *ngIf="!loadingList['clients'] && clients.length === 0" class="empty">Нет данных. Добавьте клиента выше.</div>
+      <div *ngIf="!loadingList['clients'] && clients.length > 0" class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Имя</th>
+              <th>Тип</th>
+              <th>Email</th>
+              <th>Телефон</th>
+              <th>Страна</th>
+              <th>Действия</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let c of clients">
+              <td>{{ c.id }}</td>
+              <td>{{ c.name }}</td>
+              <td>{{ c.client_type }}</td>
+              <td>{{ c.contact_email }}</td>
+              <td>{{ c.contact_phone }}</td>
+              <td>{{ c.country }}</td>
+              <td>
+                <button type="button" class="btn-small" (click)="onEditClient(c)">Редактировать</button>
+                <button type="button" class="btn-small" (click)="onDeleteClient(c.id)">Удалить</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </ng-container>
+
+    <!-- Продукты -->
+    <ng-container *ngIf="section === 'products'">
+      <h2>Продукты</h2>
+      <p class="lead">Продукт — ваша программа или приложение. Код продукта используется при проверке ключа в вашем ПО.</p>
+      <div class="admin-filter" *ngIf="isStaff">
+        <label>Показать данные пользователя:
+          <select [ngModel]="selectedOwnerId" (ngModelChange)="setSelectedOwnerAndReload($event)" name="filter_owner_products">
+            <option [ngValue]="null">— выберите пользователя —</option>
+            <option *ngFor="let u of users" [ngValue]="u.id">{{ u.username }}{{ u.is_staff ? ' (админ)' : '' }}</option>
+          </select>
+        </label>
+      </div>
+      <div class="card inline-form">
+        <h3>{{ editingProductId ? 'Редактировать продукт' : 'Добавить продукт' }}</h3>
+        <form (ngSubmit)="onSaveProduct()">
+          <label>Название <input type="text" [(ngModel)]="newProduct.name" name="new_product_name" required /></label>
+          <label>Код (уникальный, латиница) <input type="text" [(ngModel)]="newProduct.code" name="new_product_code" required placeholder="MY-APP" /></label>
+          <button type="submit" [disabled]="creating['product']">
+            {{ creating['product'] ? (editingProductId ? 'Сохранение...' : 'Создание...') : (editingProductId ? 'Сохранить' : 'Создать') }}
+          </button>
+        </form>
+      </div>
+      <p *ngIf="loadingList['products']">Загрузка...</p>
+      <div *ngIf="!loadingList['products'] && products.length === 0" class="empty">Нет данных. Добавьте продукт выше.</div>
+      <div *ngIf="!loadingList['products'] && products.length > 0" class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Название</th>
+              <th>Код</th>
+              <th>Активен</th>
+              <th>Действия</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let p of products">
+              <td>{{ p.id }}</td>
+              <td>{{ p.name }}</td>
+              <td>{{ p.code }}</td>
+              <td>{{ p.is_active ? 'Да' : 'Нет' }}</td>
+              <td>
+                <button type="button" class="btn-small" (click)="onEditProduct(p)">Редактировать</button>
+                <button type="button" class="btn-small" (click)="onDeleteProduct(p.id)">Удалить</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </ng-container>
+
+    <!-- Типы лицензий -->
+    <ng-container *ngIf="section === 'license-types'">
+      <h2>Типы лицензий</h2>
+      <p class="lead">Тип лицензии задаёт срок действия и число устройств: пробная, подписка, бессрочная и т.д.</p>
+      <div class="admin-filter" *ngIf="isStaff">
+        <label>Показать данные пользователя:
+          <select [ngModel]="selectedOwnerId" (ngModelChange)="setSelectedOwnerAndReload($event)" name="filter_owner_lt">
+            <option [ngValue]="null">— выберите пользователя —</option>
+            <option *ngFor="let u of users" [ngValue]="u.id">{{ u.username }}{{ u.is_staff ? ' (админ)' : '' }}</option>
+          </select>
+        </label>
+      </div>
+      <div class="card inline-form">
+        <h3>{{ editingLicenseTypeId ? 'Редактировать тип лицензии' : 'Добавить тип лицензии' }}</h3>
+        <form (ngSubmit)="onSaveLicenseType()">
+          <label>Название <input type="text" [(ngModel)]="newLicenseType.name" name="new_lt_name" required placeholder="TRIAL / SUBSCRIPTION / PERPETUAL" /></label>
+          <label>Описание <input type="text" [(ngModel)]="newLicenseType.description" name="new_lt_desc" /></label>
+          <label>Макс. устройств <input type="number" [(ngModel)]="newLicenseType.max_devices" name="new_lt_devices" min="1" /></label>
+          <label>Истекает <input type="checkbox" [(ngModel)]="newLicenseType.has_expiration" name="new_lt_exp" /></label>
+          <label *ngIf="newLicenseType.has_expiration">Срок (дней) <input type="number" [(ngModel)]="newLicenseType.duration_days" name="new_lt_days" min="1" /></label>
+          <button type="submit" [disabled]="creating['licenseType']">
+            {{ editingLicenseTypeId
+                ? (creating['licenseType'] ? 'Сохранение...' : 'Сохранить')
+                : (creating['licenseType'] ? 'Создание...' : 'Создать') }}
+          </button>
+        </form>
+      </div>
+      <p *ngIf="loadingList['license-types']">Загрузка...</p>
+      <div *ngIf="!loadingList['license-types'] && licenseTypes.length === 0" class="empty">Нет данных. Добавьте тип выше.</div>
+      <div *ngIf="!loadingList['license-types'] && licenseTypes.length > 0" class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Название</th>
+              <th>Макс. устройств</th>
+              <th>Срок (дней)</th>
+              <th>Истекает</th>
+              <th>Действия</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let lt of licenseTypes">
+              <td>{{ lt.id }}</td>
+              <td>{{ lt.name }}</td>
+              <td>{{ lt.max_devices }}</td>
+              <td>{{ lt.duration_days }}</td>
+              <td>{{ lt.has_expiration ? 'Да' : 'Нет' }}</td>
+              <td>
+                <button type="button" class="btn-small" (click)="onEditLicenseType(lt)">Редактировать</button>
+                <button type="button" class="btn-small" (click)="onDeleteLicenseType(lt.id)">Удалить</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </ng-container>
+
+    <!-- Лицензии -->
+    <ng-container *ngIf="section === 'licenses'">
+      <h2>Лицензии</h2>
+      <p class="lead">Выданные ключи. Каждый пользователь видит только лицензии по своим продуктам; админ выбирает пользователя и видит его лицензии.</p>
+      <div class="admin-filter" *ngIf="isStaff">
+        <label>Показать данные пользователя:
+          <select [ngModel]="selectedOwnerId" (ngModelChange)="setSelectedOwnerAndReload($event)" name="filter_owner_lic">
+            <option [ngValue]="null">— выберите пользователя —</option>
+            <option *ngFor="let u of users" [ngValue]="u.id">{{ u.username }}{{ u.is_staff ? ' (админ)' : '' }}</option>
+          </select>
+        </label>
+      </div>
+      <p *ngIf="loadingList['licenses']">Загрузка...</p>
+      <div *ngIf="!loadingList['licenses'] && licenses.length === 0" class="empty">Нет данных.</div>
+      <div *ngIf="!loadingList['licenses'] && licenses.length > 0" class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Ключ</th>
+              <th>Клиент</th>
+              <th>Продукт</th>
+              <th>Тип</th>
+              <th>Статус</th>
+              <th>До</th>
+              <th>Действия</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let lic of licenses">
+              <td>{{ lic.id }}</td>
+              <td>
+                <span class="key-cell">
+                  <code class="key">{{ lic.license_key || lic.key || '—' }}</code>
+                  <button type="button" class="btn-copy small" (click)="copyKey(lic.license_key || lic.key, 'lic-' + lic.id)" [class.copied]="copySuccess === 'lic-' + lic.id">
+                    {{ copySuccess === 'lic-' + lic.id ? 'Скопировано' : 'Копировать' }}
+                  </button>
+                </span>
+              </td>
+              <td>{{ lic.client }}</td>
+              <td>{{ lic.product }}</td>
+              <td>{{ lic.license_type }}</td>
+              <td>{{ lic.status }}</td>
+              <td>{{ lic.end_date }}</td>
+              <td>
+                <button type="button" class="btn-small" (click)="onRenewLicense(lic.id)">Продлить</button>
+                <button *ngIf="isStaff" type="button" class="btn-small" (click)="onDeleteLicense(lic.id)">Удалить</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </ng-container>
+
+    <!-- Пользователи (только админ) -->
+    <ng-container *ngIf="section === 'users' && isStaff">
+      <h2>Пользователи</h2>
+      <p class="lead">Список пользователей. Выберите пользователя, чтобы просмотреть его клиентов, продукты и лицензии в соответствующих разделах (там выберите его в фильтре «Показать данные пользователя»).</p>
+      <p *ngIf="loadingList['users']">Загрузка...</p>
+      <div *ngIf="!loadingList['users'] && users.length === 0" class="empty">Нет пользователей.</div>
+      <div *ngIf="!loadingList['users'] && users.length > 0" class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr><th>ID</th><th>Логин</th><th>Роль</th><th>Действие</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let u of users">
+              <td>{{ u.id }}</td>
+              <td>{{ u.username }}</td>
+              <td>{{ u.is_staff ? 'Админ' : 'Пользователь' }}</td>
+              <td>
+                <button type="button" class="btn-small" (click)="selectedOwnerId = u.id; setSection('clients')">Клиенты</button>
+                <button type="button" class="btn-small" (click)="selectedOwnerId = u.id; setSection('products')">Продукты</button>
+                <button type="button" class="btn-small" (click)="selectedOwnerId = u.id; setSection('licenses')">Лицензии</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </ng-container>
+
+    <!-- Помощь -->
+    <ng-container *ngIf="section === 'help'">
+      <h2>Как пользоваться системой</h2>
+      <div class="help-block">
+        <h3>Для чего нужна License Management System</h3>
+        <p>Система управления лицензиями ПО: вы создаёте продукты (ваши программы), типы лицензий (срок, число устройств) и клиентов (покупателей). Генерируете ключи и выдаёте их клиентам. Ваше приложение при запуске или при активации проверяет ключ через API — так вы контролируете, кто может пользоваться программой.</p>
+        <h3>Зачем нужен API</h3>
+        <p>API нужен, чтобы ваша программа могла проверять ключи без участия человека: приложение отправляет ключ и код продукта на сервер и получает ответ «действителен» или «истёк / не найден». Генерация ключей делается в этом веб-интерфейсе (или через API с авторизацией); проверка — из вашего кода по API.</p>
+        <h3>Что такое «получить токен» (Token)</h3>
+        <p><strong>Токен</strong> — ключ доступа к API для авторизации. При входе на этот сайт токен сохраняется автоматически и подставляется в запросы. Если вы обращаетесь к API из скриптов или другого приложения — отправьте POST на <code>/api/auth/token/</code> с логином и паролем, в ответ придёт токен; дальше в заголовке запросов указывайте <code>Authorization: Token &lt;ваш_токен&gt;</code>.</p>
+        <h3>Как встроить проверку ключа в свою программу</h3>
+        <p>Самый простой вариант — проверка только по ключу через <code>/api/support-tickets/validate-key/</code>. В вашем приложении при запуске/активации отправьте POST с JSON: <code>&#123;&quot;key&quot;: &quot;XXXX-XXXX-...&quot;&#125;</code>. Опционально можно передать <code>device_id</code> и <code>device_name</code> для привязки к устройству. В ответе придёт, например, <code>&#123;&quot;valid&quot;: true, &quot;product&quot;: &quot;DESKTOP-PRO&quot;&#125;</code> или <code>&#123;&quot;valid&quot;: false, &quot;reason&quot;: &quot;EXPIRED&quot;&#125;</code>.</p>
+        <p><strong>cURL пример:</strong> <code>curl -X POST http://127.0.0.1:8000/api/support-tickets/validate-key/ -H &quot;Content-Type: application/json&quot; -d &#39;&#123;&quot;key&quot;:&quot;ВАШ_КЛЮЧ&quot;,&quot;device_id&quot;:&quot;PC-1&quot;&#125;&#39;</code></p>
+        <p><strong>Python пример:</strong> <code>requests.post(&quot;http://127.0.0.1:8000/api/support-tickets/validate-key/&quot;, json=&#123;&quot;key&quot;:&quot;ВАШ_КЛЮЧ&quot;&#125;).json()</code></p>
+        <p><strong>JavaScript пример:</strong> <code>fetch(&quot;http://127.0.0.1:8000/api/support-tickets/validate-key/&quot;, &#123;method:&quot;POST&quot;, headers:&#123;&quot;Content-Type&quot;:&quot;application/json&quot;&#125;, body: JSON.stringify(&#123;key:&quot;ВАШ_КЛЮЧ&quot;&#125;)&#125;).then(r=&gt;r.json())</code></p>
+        <p><strong>Важно:</strong> в продакшене не храните ключ «вшитым» в коде. Пользователь вводит ключ, приложение хранит его локально (например, в конфиге), и периодически валидирует на сервере.</p>
+        <h3>Клиенты, продукты, типы лицензий</h3>
+        <p><strong>Клиент</strong> — тот, кому вы выдаёте лицензию (физлицо или компания). <strong>Продукт</strong> — ваше приложение (код продукта совпадает с тем, что вы передаёте при проверке). <strong>Тип лицензии</strong> задаёт срок и число устройств (пробная, подписка, бессрочная).</p>
+        <h3>Что такое заказы</h3>
+        <p><strong>Заказ (Order)</strong> — запись о покупке: клиент, сумма, статус. Нужен для учёта продаж. Ключ можно генерировать без заказа или привязать к заказу (тогда видно, по какому заказу выдан ключ).</p>
+        <h3>Роли и изоляция данных</h3>
+        <p><strong>Обычный пользователь</strong> видит и создаёт только своих клиентов, свои продукты и свои типы лицензий; генерирует ключи только для них. <strong>Администратор</strong> в разделе «Пользователи» видит список всех пользователей и может выбрать пользователя, чтобы просмотреть его клиентов, продукты и лицензии отдельно — данные закреплены за каждым пользователем, админ не видит «всё в одной куче», а смотрит по пользователям.</p>
+      </div>
+    </ng-container>
+
+  </main>
+</div>
