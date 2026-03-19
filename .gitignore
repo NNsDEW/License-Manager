@@ -12,6 +12,8 @@ dist/
 demo_check_key.spec
 build_demo_check_key/
 dist_demo_check_key/
+!dist_demo_check_key/
+!dist_demo_check_key/demo_check_key.exe
 
 # Node
 frontend/node_modules/
