@@ -1,9 +1,9 @@
-# Система управления лицензированием ПО
+# License-Manager
+Ипо 31 23 Наминов Наиль
 
 Backend: **Python (Django + DRF)**  
 Frontend: **Angular**  
-БД: **PostgreSQL**  
-Инфраструктура: **Docker, docker-compose, Jenkins**
+БД: **SQLite (db.sqlite3)**  
 
 ## Быстрый старт (локально)
 
@@ -15,11 +15,4 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-## Быстрый старт (Docker)
-
-```bash
-docker-compose up --build
-```
-
-Backend поднимается на `http://localhost:8000`, frontend (после его добавления) — на `http://localhost:4200` или за Nginx.
-
+Backend поднимается на `http://localhost:8000`.
