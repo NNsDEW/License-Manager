@@ -16,3 +16,22 @@ python manage.py runserver
 ```
 
 Backend поднимается на `http://localhost:8000`.
+
+## Запуск через Docker
+
+Убедитесь, что запущен Docker Desktop, затем из корня проекта выполните:
+
+```bash
+docker compose up --build
+```
+
+После запуска:
+
+- Backend: `http://localhost:8000`
+- Frontend: `http://localhost:4200`
+
+Остановка:
+
+```bash
+docker compose down
+```

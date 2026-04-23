@@ -1,27 +1,23 @@
-version: "3.9"
-
 services:
-  db:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: licensing_db
-      POSTGRES_USER: licensing_user
-      POSTGRES_PASSWORD: licensing_password
-    ports:
-      - "5432:5432"
-    volumes:
-      - db_data:/var/lib/postgresql/data
-
   web:
     build: .
-    command: python manage.py runserver 0.0.0.0:8000
+    command: sh -c "python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"
     ports:
       - "8000:8000"
     environment:
       DJANGO_SETTINGS_MODULE: licensing_backend.settings
-    depends_on:
-      - db
+    volumes:
+      - .:/app
 
-volumes:
-  db_data:
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run start -- --host 0.0.0.0 --port 4200"
+    ports:
+      - "4200:4200"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - web
 
